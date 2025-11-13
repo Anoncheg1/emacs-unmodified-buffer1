@@ -167,7 +167,7 @@ Return
 
 (defun unmodified-buffer1--all (l)
   "Like python all function applied to L list."
-  (cl-every #'identity l))
+  (seq-every-p #'identity l))
 
 (defun unmodified-buffer1--dict-compare-all ()
   "Compare saved hashes of lines that was modified with current buffer."
@@ -219,6 +219,10 @@ Return
 
 (defun unmodified-buffer1-check-equal (_pbeg _pend _len)
   "Main function that check that buffer now is not modified."
+  ;; (when (and (buffer-modified-p)
+  ;;            (not (buffer-narrowed-p)))
+  ;;   (print (list "as"
+  ;;                (eq unmodified-buffer1--unmod-content-length (buffer-size)))))
   (when (and (buffer-modified-p)
              (not (buffer-narrowed-p))
              ;; 1)
@@ -236,6 +240,7 @@ Return
     ;; (print "restore")
     (unmodified-buffer1--dict-cl)
     (set-buffer-modified-p nil)
+    (unlock-file (buffer-file-name))
     (run-hooks 'unmodified-buffer1-hook)))
 
 (defun unmodified-buffer1-save-or-revert ()
