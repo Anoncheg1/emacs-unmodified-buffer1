@@ -49,8 +49,8 @@
 ;; Configuration:
 ;; (add-to-list 'load-path "/path/to/unmodified-buffer1/")
 ;; (require 'unmodified-buffer1)
-;; (add-hook 'after-init-hook 'unmodified-buffer1-global-mode) ;; Optional
-
+;; (add-hook 'text-mode-hook 'unmodified-buffer1-mode)
+;; (add-hook 'prog-mode-hook 'unmodified-buffer1-mode)
 ;; Installation using straight.el and use-package:
 
 ;; (use-package unmodified-buffer

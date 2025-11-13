@@ -20,7 +20,8 @@ To detect that buffer returned to a first state, we do 4 steps:
 ```elisp
 (add-to-list 'load-path "/path/to/unmodified-buffer1/")
 (require 'unmodified-buffer1)
-(add-hook 'after-init-hook 'unmodified-buffer1-global-mode) ;; Optional
+(add-hook 'text-mode-hook 'unmodified-buffer1-mode) ;; Optional
+(add-hook 'prog-mode-hook 'unmodified-buffer1-mode) ;; Optional
 ```
 
 ## Installation using straight.el and use-package:
