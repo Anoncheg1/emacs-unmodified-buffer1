@@ -5,7 +5,7 @@
 ;; URL: https://github.com/Anoncheg1/emacs-unmodified-buffer1
 ;; Version: 0.1
 ;; Created: 13 Nov 2025
-;; Package-Requires: ((emacs "26.1"))
+;; Package-Requires: ((emacs "28.1"))
 ;; SPDX-License-Identifier: AGPL-3.0-or-later
 ;; Copyright (c) 2025 github.com/Anoncheg1,codeberg.org/Anoncheg
 
@@ -213,8 +213,8 @@ Return
     (save-restriction
       ;; (print (list "save"))
       (widen)
-      (setq unmodified-buffer1--unmod-content (buffer-substring-no-properties (point-min) (point-max))))
-    (setq unmodified-buffer1--unmod-content-length (buffer-size))
+      (setq unmodified-buffer1--unmod-content (buffer-substring-no-properties (point-min) (point-max)))
+      (setq unmodified-buffer1--unmod-content-length (buffer-size)))
     (unmodified-buffer1--dict-cl)))
 
 (defun unmodified-buffer1-check-equal (_pbeg _pend _len)
