@@ -57,8 +57,30 @@
 ;;   :straight (:host github :repo "Anoncheg1/emacs-unmodified-buffer1")
 ;;   :hook (after-init . unmodified-buffer1-global-mode)) ;; Optional
 
+;; For very special cases, if you have freezes, you may wrap some
+;; functions (like prog-fill-reindent-defun and indent) with setting
+;; inhibit-modification-hooks to nil or `combine-after-change-calls'
+;; macro. See commented code at bottom of this file.
+
 ;; Touch: My body wants to be fried slowly. My mind wants to succeed.
 ;;   My soul don't need anything.
+
+;; Other packages:
+;; - Navigation in Dired, Packages, Buffers modes https://github.com/Anoncheg1/firstly-search
+;; - Search with Chinese		https://github.com/Anoncheg1/pinyin-isearch
+;; - Ediff no 3-th window		https://github.com/Anoncheg1/ediffnw
+;; - Dired history			https://github.com/Anoncheg1/dired-hist
+;; - Selected window contrast		https://github.com/Anoncheg1/selected-window-contrast
+;; - Copy link to clipboard		https://github.com/Anoncheg1/org-links
+;; - Solution for "callback hell"	https://github.com/Anoncheg1/emacs-async1
+;; - outline.el usage			https://github.com/Anoncheg1/emacs-outline-it
+;; - Call LLMs and AI agents from Org-mode ai block. https://github.com/Anoncheg1/emacs-oai
+
+;; Donate:
+;; - BTC (Bitcoin) address: 1CcDWSQ2vgqv5LxZuWaHGW52B9fkT5io25
+;; - USDT (Tether) address: TVoXfYMkVYLnQZV3mGZ6GvmumuBfGsZzsN
+;; - TON (Telegram) address: UQC8rjJFCHQkfdp7KmCkTZCb5dGzLFYe2TzsiZpfsnyTFt9D
+
 
 ;;; Code:
 
@@ -206,8 +228,10 @@ Return
 ;; (defvar-local before-change-point-pos nil)
 
 (defun unmodified-buffer1-save-unmodified-content (_beg _end)
-  "Save buffer contents before the first modification."
+  "Save buffer contents before the first modification.
+Hook for `before-change-functions'."
   ;; (setq before-change-point-pos (point))
+  ;; (print (list "unmodified-buffer1-save-unmodified-content" (not (buffer-modified-p)) (not unmodified-buffer1--unmod-content-length)))
   (when (and (not (buffer-modified-p)) ; not modified now
              (not unmodified-buffer1--unmod-content-length)) ; was not saved
     (save-restriction
@@ -218,30 +242,39 @@ Return
     (unmodified-buffer1--dict-cl)))
 
 (defun unmodified-buffer1-check-equal (_pbeg _pend _len)
-  "Main function that check that buffer now is not modified."
-  ;; (when (and (buffer-modified-p)
-  ;;            (not (buffer-narrowed-p)))
-  ;;   (print (list "as"
-  ;;                (eq unmodified-buffer1--unmod-content-length (buffer-size)))))
+  "Main function that check that buffer now is not modified.
+Hook for `after-change-functions'."
+
   (when (and (buffer-modified-p)
              (not (buffer-narrowed-p))
              ;; 1)
-             (eq unmodified-buffer1--unmod-content-length (buffer-size))
-             ;; 2)
-             (unmodified-buffer1--dict-compare (line-beginning-position)
-                                               (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
-             ;; 3) may fail at `buffer-substring-no-properties' with "args-out-of-range" error for Buffer List mode.
-             (condition-case nil
-                 (unmodified-buffer1--dict-compare-all)
-               (error nil))
-             ;; 4)
-             (string-equal unmodified-buffer1--unmod-content
-                           (buffer-substring-no-properties (point-min) (point-max))))
-    ;; (print "restore")
-    (unmodified-buffer1--dict-cl)
-    (set-buffer-modified-p nil)
-    (unlock-file (buffer-file-name))
-    (run-hooks 'unmodified-buffer1-hook)))
+             (eq unmodified-buffer1--unmod-content-length (buffer-size)))
+    ;; (print (list "unmodified-buffer1-check-equal" (current-buffer) (buffer-modified-p) (eq unmodified-buffer1--unmod-content-length (buffer-size))))
+    ;; (let* (
+    ;;        ;; (backtrace-line-length 20) ; used by `backtrace-get-frames'
+    ;;        ;; (print-level 10)
+    ;;        ;; (print-length 19)
+    ;;        (bt
+    ;;         ;; (with-output-to-string (backtrace))
+    ;;         (backtrace-to-string (backtrace-get-frames 'backtrace))))
+    ;;   (print bt))
+    (when (and
+           ;; 2)
+           (unmodified-buffer1--dict-compare (line-beginning-position)
+                                             (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
+           ;; 3) may fail at `buffer-substring-no-properties' with "args-out-of-range" error for Buffer List mode.
+           (condition-case nil
+               (unmodified-buffer1--dict-compare-all)
+             (error nil))
+           ;; 4)
+           (string-equal unmodified-buffer1--unmod-content
+                         (buffer-substring-no-properties (point-min) (point-max))))
+      ;; (print "restore")
+      (unmodified-buffer1--dict-cl)
+      (set-buffer-modified-p nil)
+      (when-let (bfn (buffer-file-name))
+        (unlock-file bfn))
+      (run-hooks 'unmodified-buffer1-hook))))
 
 (defun unmodified-buffer1-save-or-revert ()
   "Re-save content after buffer is saved or reverted."
@@ -296,7 +329,13 @@ mode off of existing buffers when deactivated."
     (with-current-buffer buffer
       (unmodified-buffer1-mode -1))))
 
+;;; - faster
+;; (defun unmodified-buffer1-inhibit-modification-hooks (func-call &rest args)
+;;   (combine-after-change-calls
+;;   ;; (let ((inhibit-modification-hooks t))
+;;     (apply func-call args)))
 
+;; (advice-add 'prog-fill-reindent-defun :around #'unmodified-buffer1-inhibit-modification-hooks)
 ;;; provide
 (provide 'unmodified-buffer1)
 
