@@ -37,7 +37,7 @@ To detect that buffer returned to a first state, we do 4 steps:
 - Ediff fix		https://github.com/Anoncheg1/ediffnw
 - Dired history	https://github.com/Anoncheg1/dired-hist
 - Selected window contrast	https://github.com/Anoncheg1/selected-window-contrast
-- Copy link to clipboard	https://github.com/Anoncheg1/org-links
+- Copy link to clipboard	https://github.com/Anoncheg1/emacs-org-links
 - Solution for "callback hell"	https://github.com/Anoncheg1/emacs-async1
 - Call LLMs and AI agents from Org-mode ai block. https://github.com/Anoncheg1/emacs-oai
 - Call LLMs and AI agents from Org-mode ai block. https://github.com/Anoncheg1/emacs-oai
