@@ -14,7 +14,9 @@ To detect that buffer returned to a first state, we do 4 steps:
 1) compare buffer content by length to unmodified state.
 2) compare current line with line in unmodified buffer.
 3) compare all hashes of lines - it is 1) step stored as cache
-4) compare full buffer to a string if 1) and 2) was successful.
+4) compare full buffer to a string if 1), 2) and 3) was successful.
+
+So, we never restore buffer without full comparision with saved copy.
 
 ## Configuration:
 ```elisp
