@@ -38,7 +38,9 @@
 ;; Instead we keep copy of buffer content in a string variable and
 ;; check for modifications instanlty.
 
-;; We copy buffer to a string at `before-change-functions' and at `before-change-functions'.
+;; We copy buffer to a string at `before-change-functions' and at
+;;   `before-change-functions'.
+
 ;;
 ;; To detect that buffer returned to a first state, we do 4 steps:
 ;; 1) compare current line with line in unmodified buffer.
@@ -69,15 +71,15 @@
 ;;   My soul don't need anything.
 
 ;; Other packages:
-;; - Navigation in Dired, Packages, Buffers modes https://github.com/Anoncheg1/firstly-search
-;; - Search with Chinese		https://github.com/Anoncheg1/pinyin-isearch
-;; - Ediff no 3-th window		https://github.com/Anoncheg1/ediffnw
-;; - Dired history			https://github.com/Anoncheg1/dired-hist
-;; - Selected window contrast		https://github.com/Anoncheg1/selected-window-contrast
-;; - Copy link to clipboard		https://github.com/Anoncheg1/emacs-org-links
-;; - Solution for "callback hell"	https://github.com/Anoncheg1/emacs-async1
-;; - outline.el usage			https://github.com/Anoncheg1/emacs-outline-it
-;; - Call LLMs and AI agents from Org-mode ai block.  https://github.com/Anoncheg1/emacs-oai
+;; - Modern Navigation in major modes https://github.com/Anoncheg1/firstly-search
+;; - Search with Chinese	https://github.com/Anoncheg1/pinyin-isearch
+;; - Ediff no 3-th window	https://github.com/Anoncheg1/ediffnw
+;; - Dired history		https://github.com/Anoncheg1/dired-hist
+;; - Selected window contrast	https://github.com/Anoncheg1/selected-window-contrast
+;; - Copy link to clipboard	https://github.com/Anoncheg1/emacs-org-links
+;; - Solution for "callback hell" https://github.com/Anoncheg1/emacs-async1
+;; - outline.el usage		https://github.com/Anoncheg1/emacs-outline-it
+;; - Call AI & LLMsA from Org-mode https://github.com/Anoncheg1/emacs-oai
 
 ;; Donate:
 ;; - BTC (Bitcoin) address: 1CcDWSQ2vgqv5LxZuWaHGW52B9fkT5io25
