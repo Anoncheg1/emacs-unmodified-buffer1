@@ -63,9 +63,9 @@
 ;; For very special cases, if you have freezes, you may wrap some
 ;; functions (like prog-fill-reindent-defun and indent) with setting
 ;; inhibit-modification-hooks to nil or `combine-after-change-calls'
-;; macro. See commented code at bottom of this file.
+;; macro.  See commented code at bottom of this file.
 
-;; Touch: My body wants to be fried slowly. My mind wants to succeed.
+;; Touch: My body wants to be fried slowly.  My mind wants to succeed.
 ;;   My soul don't need anything.
 
 ;; Other packages:
@@ -77,7 +77,7 @@
 ;; - Copy link to clipboard		https://github.com/Anoncheg1/emacs-org-links
 ;; - Solution for "callback hell"	https://github.com/Anoncheg1/emacs-async1
 ;; - outline.el usage			https://github.com/Anoncheg1/emacs-outline-it
-;; - Call LLMs and AI agents from Org-mode ai block. https://github.com/Anoncheg1/emacs-oai
+;; - Call LLMs and AI agents from Org-mode ai block.  https://github.com/Anoncheg1/emacs-oai
 
 ;; Donate:
 ;; - BTC (Bitcoin) address: 1CcDWSQ2vgqv5LxZuWaHGW52B9fkT5io25
@@ -170,7 +170,7 @@ preceding newline or 0."
 ;; (unmodified-buffer1--str-line-at-pos 50 "aaa\nbbb\nccc")                ;; => "ccc" 8
 
 
-(defun nth-newline-pos (string n)
+(defun unmodified-buffer1--nth-newline-pos (string n)
   "Return position of the N-th \\n in STRING.
 N is the zero-based, return position start from 0."
    (if (eq n 0)
@@ -185,14 +185,14 @@ N is the zero-based, return position start from 0."
          (and (= count n) (1+ i))))))
 (when (not
      (and
-      (eq (nth-newline-pos "foo\nbar\nbaz\nqux" 3) 12)
-      (eq (nth-newline-pos "foo\nbar\nbaz\nqux" 0) 0)
-      (eq (nth-newline-pos "foo\nbar\nbaz\nqux" 1) 4)
-      (eq (nth-newline-pos "foo\nbar\nbaz\nqux" 99) nil)))
-  (error vv"nth-newline-pos \"foo\nbar\nbaz\nqux\""))
+      (eq (unmodified-buffer1--nth-newline-pos "foo\nbar\nbaz\nqux" 3) 12)
+      (eq (unmodified-buffer1--nth-newline-pos "foo\nbar\nbaz\nqux" 0) 0)
+      (eq (unmodified-buffer1--nth-newline-pos "foo\nbar\nbaz\nqux" 1) 4)
+      (eq (unmodified-buffer1--nth-newline-pos "foo\nbar\nbaz\nqux" 99) nil)))
+  (error "Unmodified-buffer1--nth-newline-pos \"foo\nbar\nbaz\nqux\""))
 
 ;; (let ((st "foo\nbar\nbaz\nqux"))
-;;   (unmodified-buffer1--str-line-at-pos (nth-newline-pos st 99) st)) ; foo
+;;   (unmodified-buffer1--str-line-at-pos (unmodified-buffer1--nth-newline-pos st 99) st)) ; foo
 
 
 ;;; - Dict - hash table
@@ -224,8 +224,8 @@ Return
     (if found
         (eq found hash-value) ; compare
       ;; else - not found - put new and compare (puthash return value)
-      ;; (print (list "unmodified-buffer1--dict-compare1" key (nth-newline-pos unmodified-buffer1--unmod-content key)))
-      (let* ((line-pos (nth-newline-pos unmodified-buffer1--unmod-content key)))
+      ;; (print (list "unmodified-buffer1--dict-compare1" key (unmodified-buffer1--nth-newline-pos unmodified-buffer1--unmod-content key)))
+      (let* ((line-pos (unmodified-buffer1--nth-newline-pos unmodified-buffer1--unmod-content key)))
         ;; (print (list "unmodified-buffer1--dict-compare2" line-pos found hash-value "key:" key value unmodified-buffer1--dict))
         ;; (print (list (sxhash-equal (unmodified-buffer1--str-line-at-pos line-pos unmodified-buffer1--unmod-content)) (unmodified-buffer1--str-line-at-pos line-pos unmodified-buffer1--unmod-content)))
         ;; - save line number
@@ -365,7 +365,9 @@ Hook for `after-change-functions'."
 (defun unmodified-buffer1-undo-advice (orig-fun &rest args)
   "Clear cache of modified lines if buffer reverted.
 If all modified lines is visible don't move pointer with undo.
-Aplied for visible buffers only."
+Aplied for visible buffers only.
+Argument ORIG-FUN `undo'.
+Optional argument ARGS `undo' arguments."
   (if (not unmodified-buffer1-undo-not-jump-flag)
       (apply orig-fun args)
     ;; else
