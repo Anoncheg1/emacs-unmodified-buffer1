@@ -2,6 +2,8 @@
 
 A minor mode that automatically restores an Emacs buffer modified state in case its contents match the not modified buffer content.
 
+Also allow to prevent ```undo``` to jump to visible lines.
+
 This package provides an Emacs hook to automatically revert a buffer's modified state, in case the buffer has been changed back to match the original content of the buffer.
 
 Unlike "arthurcgusmao/unmodified-buffer" 2022 package, we don't use timer 0.5 sec, we don't save buffer to a file.

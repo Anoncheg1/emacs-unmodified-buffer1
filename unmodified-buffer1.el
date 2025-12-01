@@ -1,4 +1,4 @@
-;;; unmodified-buffer1.el --- Better manage line numbers in your org-mode links -*- lexical-binding: t -*-
+;;; unmodified-buffer1.el --- Restore modified state, prevent undo to jump to visible -*- lexical-binding: t -*-
 
 ;; Author: <github.com/Anoncheg1,codeberg.org/Anoncheg>
 ;; Keywords: file, convenience
@@ -41,8 +41,8 @@
 ;; We copy buffer to a string at `before-change-functions' and at `before-change-functions'.
 ;;
 ;; To detect that buffer returned to a first state, we do 4 steps:
-;; 1) compare buffer content by length to unmodified state.
-;; 2) compare current line with line in unmodified buffer.
+;; 1) compare current line with line in unmodified buffer.
+;; 2) compare buffer content by length/size to unmodified state.
 ;; 3) compare all hashes of lines - it is 1) step stored as cache
 ;; 4) compare full buffer to a string if 1), 2) and 3) was successful.
 ;; It never restore buffer without full comparision with saved copy.
@@ -81,7 +81,8 @@
 ;; - BTC (Bitcoin) address: 1CcDWSQ2vgqv5LxZuWaHGW52B9fkT5io25
 ;; - USDT (Tether) address: TVoXfYMkVYLnQZV3mGZ6GvmumuBfGsZzsN
 ;; - TON (Telegram) address: UQC8rjJFCHQkfdp7KmCkTZCb5dGzLFYe2TzsiZpfsnyTFt9D
-
+;;; - includes
+(require 'org-macs) ; for `org-goto-line'
 
 ;;; Code:
 
@@ -103,6 +104,11 @@ Not require for mode, may be safely removded from
 (defcustom unmodified-buffer1-hook '(unmodified-buffer1--run-after-save-hook-function)
   "Normal hook that is run after a buffer is set to unmodified."
   :type 'hook
+  :group 'unmodified-buffer1)
+
+(defcustom unmodified-buffer1-undo-not-jump-flag t
+  "Non-nil means prevent `undo' to jump to visible line."
+  :type 'boolean
   :group 'unmodified-buffer1)
 
 
@@ -145,6 +151,7 @@ preceding newline or 0."
           (list (substring str start end) start))))))
 
 ;; (unmodified-buffer1--str-line-at-pos 0 "a\nb\nc") ;; "a" 0
+;; (unmodified-buffer1--str-line-at-pos 999 "a\nb\nc") ;; "c" 4
 ;; (unmodified-buffer1--str-line-at-pos 1 "a\nb\nc") ;; "a" 0
 ;; (unmodified-buffer1--str-line-at-pos 2 "a\nb\nc") ;; "b" 2
 ;; (unmodified-buffer1--str-line-at-pos 0 nil) ;; => error
@@ -161,32 +168,76 @@ preceding newline or 0."
 ;; (unmodified-buffer1--str-line-at-pos 50 "aaa\nbbb\nccc")                ;; => "ccc" 8
 
 
+(defun nth-newline-pos (string n)
+  "Return position of the N-th \\n in STRING.
+N is the zero-based, return position start from 0."
+   (if (eq n 0)
+       0
+     ;; else
+     (when (and (stringp string) (integerp n) (> n 0))
+       (let ((i -1)
+             (count 0))
+         (while (and (< count n)
+                     (setq i (string-match "\n" string (1+ i))))
+           (setq count (1+ count)))
+         (and (= count n) (1+ i))))))
+(when (not
+     (and
+      (eq (nth-newline-pos "foo\nbar\nbaz\nqux" 3) 12)
+      (eq (nth-newline-pos "foo\nbar\nbaz\nqux" 0) 0)
+      (eq (nth-newline-pos "foo\nbar\nbaz\nqux" 1) 4)
+      (eq (nth-newline-pos "foo\nbar\nbaz\nqux" 99) nil)))
+  (error vv"nth-newline-pos \"foo\nbar\nbaz\nqux\""))
+
+;; (let ((st "foo\nbar\nbaz\nqux"))
+;;   (unmodified-buffer1--str-line-at-pos (nth-newline-pos st 99) st)) ; foo
+
+
 ;;; - Dict - hash table
 
-(defvar unmodified-buffer1--dict (make-hash-table :test 'eq)
+(defvar-local unmodified-buffer1--dict (make-hash-table :test 'eq)
   "Cache dictionary for hashes of lines of unmodified buffer.
-Key is a begin of line in nonmodified buffer; Value is integer hash of
+Key is a line number in nonmodified buffer; Value is integer hash of
 unmodified buffer line.  `eq' is used to find position.")
 
+(defvar-local unmodified-buffer1--dict-modified-keys '()
+  "Keys that was modified.
+we clear it at dict clear or at undo command that preserv dict hash.")
+
 (defun unmodified-buffer1--dict-compare (key value)
-  "KEY is line begin position in buffer, VALUE is modified line.
+  "Compare line with line of unmodified buffer.
+KEY is line number in buffer starting from 0,
+VALUE is modified line, should be a string.
 Put line to dict of `unmodified-buffer1--unmod-content' if not cached.
+If key line number is larger than `unmodified-buffer1--unmod-content' we
+place it with nil line to hastable and return nil.
 Return
 - nil - if not equal,
 - t - if hash of value is equal to stored hash or line of stored buffer
   in `unmodified-buffer1--unmod-content'."
-  ;; (print (list "unmodified-buffer1--dict-compare1" key value))
+
   (let* ((hash-value (sxhash-equal value))
          (found (gethash key unmodified-buffer1--dict))) ; hash of line
+
     (if found
         (eq found hash-value) ; compare
       ;; else - not found - put new and compare (puthash return value)
-      (let ((res (unmodified-buffer1--str-line-at-pos (1- key) unmodified-buffer1--unmod-content)))
-        ;; (print (list "unmodified-buffer1--dict-compare2" res))
-        (eq (puthash (cadr res)
-                     (sxhash-equal (car res)) ; value
-                     unmodified-buffer1--dict)
-            hash-value)))))
+      ;; (print (list "unmodified-buffer1--dict-compare1" key (nth-newline-pos unmodified-buffer1--unmod-content key)))
+      (let* ((line-pos (nth-newline-pos unmodified-buffer1--unmod-content key)))
+        (print (list "unmodified-buffer1--dict-compare2" line-pos found hash-value "key:" key value unmodified-buffer1--dict))
+        ;; (print (list (sxhash-equal (unmodified-buffer1--str-line-at-pos line-pos unmodified-buffer1--unmod-content)) (unmodified-buffer1--str-line-at-pos line-pos unmodified-buffer1--unmod-content)))
+        ;; - save line number
+        (unless (member key unmodified-buffer1--dict-modified-keys)
+          (push key unmodified-buffer1--dict-modified-keys))
+        ;;; - save cash, and return result
+        (if line-pos
+            (eq (puthash key
+                         (sxhash-equal (car (unmodified-buffer1--str-line-at-pos line-pos unmodified-buffer1--unmod-content))) ; value
+                         unmodified-buffer1--dict)
+                hash-value)
+          ;; else - no linie in saved buffer, we use just nil
+          (puthash key nil unmodified-buffer1--dict)
+          nil)))))
 
 (defun unmodified-buffer1--all (l)
   "Like python all function applied to L list."
@@ -194,24 +245,40 @@ Return
 
 (defun unmodified-buffer1--dict-compare-all ()
   "Compare saved hashes of lines that was modified with current buffer."
+  (print (list "unmodified-buffer1--dict-modified-keys" unmodified-buffer1--dict-modified-keys))
   (save-excursion
-    (let (re) ; collecting results from maphash
-      (maphash (lambda (k v)
-                 "k is a line begin position (from 0), v is hash of line."
-                 (goto-char (1+ k))
-                 ;; (print (list (eq (sxhash-equal (buffer-substring-no-properties (1+ k) (line-end-position)))
-                 ;;                  v)
-                 ;;              (buffer-substring-no-properties (1+ k) (line-end-position))
-                 ;;              v))
-                 (push (eq (sxhash-equal (buffer-substring-no-properties (1+ k) (line-end-position)))
-                           v)
+    (let (re) ; collecting results from mapc
+      (mapc (lambda (k) ; loop over modified lines
+              (org-goto-line (1+ k))
+              (print (list "compare-all" (gethash k unmodified-buffer1--dict) (sxhash-equal (buffer-substring-no-properties (point) (line-end-position))) (buffer-substring-no-properties (point) (line-end-position))))
+              (push (if-let ((hash (gethash k unmodified-buffer1--dict)))
+                        (eq (sxhash-equal (buffer-substring-no-properties (point) (line-end-position)))
+                            hash)
+                      ;; if hash was saved as nil - line was not exist, we will not compare such lines
+                      ;; and assume they are not modified - but we don't know
+                      t)
                        re))
-               unmodified-buffer1--dict)
-      (unmodified-buffer1--all re))))
+            unmodified-buffer1--dict-modified-keys)
+      (unmodified-buffer1--all re))
+
+    ;; (let (re) ; collecting results from maphash
+    ;;   (maphash (lambda (k v)
+    ;;              "k is a line number, v is hash of line."
+    ;;              (org-goto-line (1+ k))
+    ;;              (print (list v (sxhash-equal (buffer-substring-no-properties (point) (line-end-position))) (buffer-substring-no-properties (point) (line-end-position))))
+    ;;              (push (eq (sxhash-equal (buffer-substring-no-properties (point) (line-end-position)))
+    ;;                        v)
+    ;;                    re))
+    ;;            unmodified-buffer1--dict)
+    ;;   (unmodified-buffer1--all re))
+    ))
+
+(unmodified-buffer1--dict-compare-all)
 
 (defun unmodified-buffer1--dict-cl ()
   "Clear hash table from lines."
-  (clrhash unmodified-buffer1--dict))
+  (clrhash unmodified-buffer1--dict)
+  (setq unmodified-buffer1--dict-modified-keys nil))
 
 ;; (puthash (sxhash-eq 1) (sxhash-equal "value") unmodified-buffer1--dict)
 
@@ -221,10 +288,10 @@ Return
 ;; (gethash (sxhash-eq 13) unmodified-buffer1--dict) ; => nil
 ;; (unmodified-buffer1--dict-compare 13 "some line") ; => nil
 ;; (gethash (sxhash-eq 13) unmodified-buffer1--dict) ; hash of lines
-;; (maphash (lambda (k v)
-;;                  (print (list k v)
-;;                  ))
-;;                unmodified-buffer1--dict)
+(maphash (lambda (k v)
+                 (print (list k v)
+                 ))
+               unmodified-buffer1--dict)
 ;; (unmodified-buffer1--dict-compare-all)
 ;; (defvar-local before-change-point-pos nil)
 
@@ -245,11 +312,14 @@ Hook for `before-change-functions'."
 (defun unmodified-buffer1-check-equal (_pbeg _pend _len)
   "Main function that check that buffer now is not modified.
 Hook for `after-change-functions'."
-
+  (ignore _pbeg _pend _len)
+  ;; (print (unmodified-buffer1--dict-compare (line-number-at-pos (line-beginning-position))
+  ;;                                          (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
   (when (and (buffer-modified-p)
              (not (buffer-narrowed-p))
-             ;; 1)
-             (eq unmodified-buffer1--unmod-content-length (buffer-size)))
+             ;; s1)
+             (unmodified-buffer1--dict-compare (1- (line-number-at-pos (line-beginning-position)))
+                                               (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
     ;; (print (list "unmodified-buffer1-check-equal" (current-buffer) (buffer-modified-p) (eq unmodified-buffer1--unmod-content-length (buffer-size))))
     ;; (let* (
     ;;        ;; (backtrace-line-length 20) ; used by `backtrace-get-frames'
@@ -259,15 +329,17 @@ Hook for `after-change-functions'."
     ;;         ;; (with-output-to-string (backtrace))
     ;;         (backtrace-to-string (backtrace-get-frames 'backtrace))))
     ;;   (print bt))
+    (print "s1)")
     (when (and
-           ;; 2)
-           (unmodified-buffer1--dict-compare (line-beginning-position)
-                                             (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
-           ;; 3) may fail at `buffer-substring-no-properties' with "args-out-of-range" error for Buffer List mode.
+           ;; s2)
+           (when (eq unmodified-buffer1--unmod-content-length (buffer-size))
+             (print "s2)"))
+           ;; s3) compare all hashes of lines - it is 1) step stored as cache
+           ;; may fail at `buffer-substring-no-properties' with "args-out-of-range" error for Buffer List mode.
            (condition-case nil
                (unmodified-buffer1--dict-compare-all)
              (error nil))
-           ;; 4)
+           ;; s4)
            (string-equal unmodified-buffer1--unmod-content
                          (buffer-substring-no-properties (point-min) (point-max))))
       ;; (print "restore")
@@ -279,6 +351,7 @@ Hook for `after-change-functions'."
 
 (defun unmodified-buffer1-save-or-revert ()
   "Re-save content after buffer is saved or reverted."
+  (print "revert")
   (save-restriction
     ;; (print (list "save"))
     (widen)
@@ -286,20 +359,58 @@ Hook for `after-change-functions'."
     (setq unmodified-buffer1--unmod-content-length (buffer-size)))
   (unmodified-buffer1--dict-cl))
 
+(defun unmodified-buffer1-undo-advice (orig-fun &rest args)
+  "Clear cache of modified lines if buffer reverted.
+If all modified lines is visible don't move pointer with undo.
+Aplied for visible buffers only."
+  (if (not unmodified-buffer1-undo-not-jump-flag)
+      (apply orig-fun args)
+    ;; else
+    (if-let* ((win (get-buffer-window (current-buffer) t)) ; check that buffer is visible
+              (start-pos (+ (line-number-at-pos (window-start win)) 3))
+              (end-pos (- (line-number-at-pos (window-end win)) 3)))
+        ;; buffer is visible
+        ;; check that all line numbers (modified lines) between start-pos and end-pos
+        (if (let (re) ; collecting results from maphash
+              (mapc (lambda (k)
+                      "get k."
+                      (print (list start-pos k end-pos))
+                      (push (and (>= k start-pos)
+                                 (<= k end-pos))
+                            re))
+                    unmodified-buffer1--dict-modified-keys)
+              ;; all is true
+              (unmodified-buffer1--all re))
+            ;; all modified lines is visible.
+            (save-excursion
+              (apply orig-fun args))
+          ;; else - some modified lines is not visible
+          (apply orig-fun args))
+      ;; else - buffer not visible
+      (apply orig-fun args)))
+  ;; - clear modified keys if not buffer is not modified now.
+  (unless (buffer-modified-p)
+    ;; (unmodified-buffer1--dict-cl) ; clear cache if not modified after undo.
+    (setq unmodified-buffer1--dict-modified-keys nil) ; not clear cech, but clear modified list
+    ))
 
+
+;;; - Hooks activation
 (defun unmodified-buffer1-add-hooks ()
   "Setup hooks for this buffer for unmodified content capture."
   (add-hook 'before-change-functions	#'unmodified-buffer1-save-unmodified-content nil t) ; save
   (add-hook 'after-change-functions	#'unmodified-buffer1-check-equal nil t)
   (add-hook 'after-save-hook		#'unmodified-buffer1-save-or-revert nil t) ; save
-  (add-hook 'after-revert-hook		#'unmodified-buffer1-save-or-revert nil t))
+  (add-hook 'after-revert-hook		#'unmodified-buffer1-save-or-revert nil t)
+  (advice-add 'undo :around #'unmodified-buffer1-undo-advice))
 
 (defun unmodified-buffer1-remove-hooks ()
   "Remove hooks."
   (remove-hook 'before-change-functions	#'unmodified-buffer1-save-unmodified-content t)
   (remove-hook 'after-change-functions		#'unmodified-buffer1-check-equal t)
   (remove-hook 'after-save-hook		#'unmodified-buffer1-save-or-revert t)
-  (remove-hook 'after-revert-hook		#'unmodified-buffer1-save-or-revert t))
+  (remove-hook 'after-revert-hook		#'unmodified-buffer1-save-or-revert t)
+  (advice-remove 'undo #'unmodified-buffer1-undo-advice))
 
 ;;; - Mode
 
