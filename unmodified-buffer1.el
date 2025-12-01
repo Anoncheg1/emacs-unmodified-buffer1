@@ -313,10 +313,10 @@ Hook for `before-change-functions'."
       (setq unmodified-buffer1--unmod-content-length (buffer-size)))
     (unmodified-buffer1--dict-cl)))
 
-(defun unmodified-buffer1-check-equal (_pbeg _pend _len)
+(defun unmodified-buffer1-check-equal (&rest _args)
   "Main function that check that buffer now is not modified.
 Hook for `after-change-functions'."
-  (ignore _pbeg _pend _len)
+  (ignore _args)
   ;; (print (unmodified-buffer1--dict-compare (line-number-at-pos (line-beginning-position))
   ;;                                          (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
   (when (and (buffer-modified-p)
