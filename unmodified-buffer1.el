@@ -226,7 +226,7 @@ Return
       ;; else - not found - put new and compare (puthash return value)
       ;; (print (list "unmodified-buffer1--dict-compare1" key (nth-newline-pos unmodified-buffer1--unmod-content key)))
       (let* ((line-pos (nth-newline-pos unmodified-buffer1--unmod-content key)))
-        (print (list "unmodified-buffer1--dict-compare2" line-pos found hash-value "key:" key value unmodified-buffer1--dict))
+        ;; (print (list "unmodified-buffer1--dict-compare2" line-pos found hash-value "key:" key value unmodified-buffer1--dict))
         ;; (print (list (sxhash-equal (unmodified-buffer1--str-line-at-pos line-pos unmodified-buffer1--unmod-content)) (unmodified-buffer1--str-line-at-pos line-pos unmodified-buffer1--unmod-content)))
         ;; - save line number
         (unless (member key unmodified-buffer1--dict-modified-keys)
@@ -247,12 +247,12 @@ Return
 
 (defun unmodified-buffer1--dict-compare-all ()
   "Compare saved hashes of lines that was modified with current buffer."
-  (print (list "unmodified-buffer1--dict-modified-keys" unmodified-buffer1--dict-modified-keys))
+  ;; (print (list "unmodified-buffer1--dict-modified-keys" unmodified-buffer1--dict-modified-keys))
   (save-excursion
     (let (re) ; collecting results from mapc
       (mapc (lambda (k) ; loop over modified lines
               (org-goto-line (1+ k))
-              (print (list "compare-all" (gethash k unmodified-buffer1--dict) (sxhash-equal (buffer-substring-no-properties (point) (line-end-position))) (buffer-substring-no-properties (point) (line-end-position))))
+              ;; (print (list "compare-all" (gethash k unmodified-buffer1--dict) (sxhash-equal (buffer-substring-no-properties (point) (line-end-position))) (buffer-substring-no-properties (point) (line-end-position))))
               (push (if-let ((hash (gethash k unmodified-buffer1--dict)))
                         (eq (sxhash-equal (buffer-substring-no-properties (point) (line-end-position)))
                             hash)
@@ -275,7 +275,7 @@ Return
     ;;   (unmodified-buffer1--all re))
     ))
 
-(unmodified-buffer1--dict-compare-all)
+;; (unmodified-buffer1--dict-compare-all)
 
 (defun unmodified-buffer1--dict-cl ()
   "Clear hash table from lines."
@@ -290,10 +290,10 @@ Return
 ;; (gethash (sxhash-eq 13) unmodified-buffer1--dict) ; => nil
 ;; (unmodified-buffer1--dict-compare 13 "some line") ; => nil
 ;; (gethash (sxhash-eq 13) unmodified-buffer1--dict) ; hash of lines
-(maphash (lambda (k v)
-                 (print (list k v)
-                 ))
-               unmodified-buffer1--dict)
+;; (maphash (lambda (k v)
+;;                  (print (list k v)
+;;                  ))
+;;                unmodified-buffer1--dict)
 ;; (unmodified-buffer1--dict-compare-all)
 ;; (defvar-local before-change-point-pos nil)
 
@@ -331,11 +331,12 @@ Hook for `after-change-functions'."
     ;;         ;; (with-output-to-string (backtrace))
     ;;         (backtrace-to-string (backtrace-get-frames 'backtrace))))
     ;;   (print bt))
-    (print "s1)")
+    ;; (print "s1)")
     (when (and
            ;; s2)
-           (when (eq unmodified-buffer1--unmod-content-length (buffer-size))
-             (print "s2)"))
+           ;; (when
+               (eq unmodified-buffer1--unmod-content-length (buffer-size))
+             ;; (print "s2)"))
            ;; s3) compare all hashes of lines - it is 1) step stored as cache
            ;; may fail at `buffer-substring-no-properties' with "args-out-of-range" error for Buffer List mode.
            (condition-case nil
@@ -353,7 +354,7 @@ Hook for `after-change-functions'."
 
 (defun unmodified-buffer1-save-or-revert ()
   "Re-save content after buffer is saved or reverted."
-  (print "revert")
+  ;; (print "revert")
   (save-restriction
     ;; (print (list "save"))
     (widen)
@@ -376,7 +377,7 @@ Aplied for visible buffers only."
         (if (let (re) ; collecting results from maphash
               (mapc (lambda (k)
                       "get k."
-                      (print (list start-pos k end-pos))
+                      ;; (print (list start-pos k end-pos))
                       (push (and (>= k start-pos)
                                  (<= k end-pos))
                             re))
