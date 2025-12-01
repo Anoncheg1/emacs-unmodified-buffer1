@@ -28,6 +28,11 @@ So, we never restore buffer without full comparision with saved copy.
 (add-hook 'prog-mode-hook 'unmodified-buffer1-mode) ;; Optional
 ```
 
+If you like classic `Undo` jumping style set:
+```elisp
+(setopt unmodified-buffer1-undo-not-jump-flag nil)
+```
+
 ## Installation using straight.el and use-package:
 ```elisp
 (use-package unmodified-buffer

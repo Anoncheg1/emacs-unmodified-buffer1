@@ -54,6 +54,10 @@
 ;; (require 'unmodified-buffer1)
 ;; (add-hook 'text-mode-hook 'unmodified-buffer1-mode)
 ;; (add-hook 'prog-mode-hook 'unmodified-buffer1-mode)
+;;
+;; if you want old Undo jumping style set:
+;; (setopt unmodified-buffer1-undo-not-jump-flag nil)
+
 ;; Installation using straight.el and use-package:
 
 ;; (use-package unmodified-buffer
