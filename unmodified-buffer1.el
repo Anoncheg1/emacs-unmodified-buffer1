@@ -317,6 +317,7 @@ Hook for `before-change-functions'."
   "Main function that check that buffer now is not modified.
 Hook for `after-change-functions'."
   (ignore _args)
+  (setq _args _args) ; for melpazoid
   ;; (print (unmodified-buffer1--dict-compare (line-number-at-pos (line-beginning-position))
   ;;                                          (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
   (when (and (buffer-modified-p)
