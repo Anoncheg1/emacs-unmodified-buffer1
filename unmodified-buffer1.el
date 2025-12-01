@@ -58,6 +58,8 @@
 ;;   :straight (:host github :repo "Anoncheg1/emacs-unmodified-buffer1")
 ;;   :hook (after-init . unmodified-buffer1-global-mode)) ;; Optional
 
+;; Customization: M-x customize-group RET unmodified-buffer1
+
 ;; For very special cases, if you have freezes, you may wrap some
 ;; functions (like prog-fill-reindent-defun and indent) with setting
 ;; inhibit-modification-hooks to nil or `combine-after-change-calls'
