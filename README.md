@@ -13,8 +13,8 @@ Instead we keep copy of buffer content in a string variable and check for modifi
 We copy buffer to a string at `before-change-functions' and at `before-change-functions'.
 
 To detect that buffer returned to a first state, we do 4 steps:
-1) compare buffer content by length to unmodified state.
-2) compare current line with line in unmodified buffer.
+1) compare current line with line in unmodified buffer.
+2) compare buffer content by length to unmodified state.
 3) compare all hashes of lines - it is 1) step stored as cache
 4) compare full buffer to a string if 1), 2) and 3) was successful.
 
