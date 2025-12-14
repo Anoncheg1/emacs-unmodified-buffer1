@@ -89,12 +89,12 @@
 ;; - BTC (Bitcoin) address: 1CcDWSQ2vgqv5LxZuWaHGW52B9fkT5io25
 ;; - USDT (Tether) address: TVoXfYMkVYLnQZV3mGZ6GvmumuBfGsZzsN
 ;; - TON (Telegram) address: UQC8rjJFCHQkfdp7KmCkTZCb5dGzLFYe2TzsiZpfsnyTFt9D
-;;; - includes
+;; -- includes
 (require 'org-macs) ; for `org-goto-line'
 
 ;;; Code:
 
-;;; - Variables
+;; -- Variables
 
 ;;;###autoload
 (defgroup unmodified-buffer1 nil
@@ -109,16 +109,22 @@ Not require for mode, may be safely removded from
   (run-hooks 'after-save-hook)
   (add-hook 'after-save-hook #'unmodified-buffer1-save-or-revert nil t))
 
+;;;###autoload
 (defcustom unmodified-buffer1-hook '(unmodified-buffer1--run-after-save-hook-function)
   "Normal hook that is run after a buffer is set to unmodified."
   :type 'hook
   :group 'unmodified-buffer1)
 
+;;;###autoload
 (defcustom unmodified-buffer1-undo-not-jump-flag t
   "Non-nil means prevent `undo' to jump to visible line."
   :type 'boolean
   :group 'unmodified-buffer1)
 
+(defcustom unmodified-buffer1-undo-hidden-fix-flag t
+  "Non-nil means show hidden entity if `undo' jump to hidden one."
+  :type 'boolean
+  :group 'unmodified-buffer1)
 
 (defvar-local unmodified-buffer1--unmod-content nil
   "Buffer content as it was last unmodified.")
@@ -127,7 +133,7 @@ Not require for mode, may be safely removded from
   "Flag if content has been saved since last modification.
 Also length of content string.")
 
-;;; - String at pos
+;; -- String at pos
 
 (defun unmodified-buffer1--str-line-at-pos (pos str)
   "Get line by position POS from string STR.
@@ -201,7 +207,7 @@ N is the zero-based, return position start from 0."
 ;;   (unmodified-buffer1--str-line-at-pos (unmodified-buffer1--nth-newline-pos st 99) st)) ; foo
 
 
-;;; - Dict - hash table
+;; -- Dict - hash table
 
 (defvar-local unmodified-buffer1--dict (make-hash-table :test 'eq)
   "Cache dictionary for hashes of lines of unmodified buffer.
@@ -237,7 +243,8 @@ Return
         ;; - save line number
         (unless (member key unmodified-buffer1--dict-modified-keys)
           (push key unmodified-buffer1--dict-modified-keys))
-        ;;; - save cash, and return result
+        ;; (print (list "unmodified-buffer1--dict-compare" unmodified-buffer1--dict-modified-keys))
+        ;; - save cash, and return result
         (if line-pos
             (eq (puthash key
                          (sxhash-equal (car (unmodified-buffer1--str-line-at-pos line-pos unmodified-buffer1--unmod-content))) ; value
@@ -267,21 +274,7 @@ Return
                       t)
                        re))
             unmodified-buffer1--dict-modified-keys)
-      (unmodified-buffer1--all re))
-
-    ;; (let (re) ; collecting results from maphash
-    ;;   (maphash (lambda (k v)
-    ;;              "k is a line number, v is hash of line."
-    ;;              (org-goto-line (1+ k))
-    ;;              (print (list v (sxhash-equal (buffer-substring-no-properties (point) (line-end-position))) (buffer-substring-no-properties (point) (line-end-position))))
-    ;;              (push (eq (sxhash-equal (buffer-substring-no-properties (point) (line-end-position)))
-    ;;                        v)
-    ;;                    re))
-    ;;            unmodified-buffer1--dict)
-    ;;   (unmodified-buffer1--all re))
-    ))
-
-;; (unmodified-buffer1--dict-compare-all)
+      (unmodified-buffer1--all re))))
 
 (defun unmodified-buffer1--dict-cl ()
   "Clear hash table from lines."
@@ -306,12 +299,9 @@ Return
 (defun unmodified-buffer1-save-unmodified-content (_beg _end)
   "Save buffer contents before the first modification.
 Hook for `before-change-functions'."
-  ;; (setq before-change-point-pos (point))
-  ;; (print (list "unmodified-buffer1-save-unmodified-content" (not (buffer-modified-p)) (not unmodified-buffer1--unmod-content-length)))
   (when (and (not (buffer-modified-p)) ; not modified now
              (not unmodified-buffer1--unmod-content-length)) ; was not saved
     (save-restriction
-      ;; (print (list "save"))
       (widen)
       (setq unmodified-buffer1--unmod-content (buffer-substring-no-properties (point-min) (point-max)))
       (setq unmodified-buffer1--unmod-content-length (buffer-size)))
@@ -322,24 +312,11 @@ Hook for `before-change-functions'."
 Hook for `after-change-functions'.
 Optional argument ARGS unused."
   (ignore args)
-  ;; (setq _args _args) ; for melpazoid
-  ;; (print (unmodified-buffer1--dict-compare (line-number-at-pos (line-beginning-position))
-  ;;                                          (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
   (when (and (buffer-modified-p)
              (not (buffer-narrowed-p))
              ;; s1)
              (unmodified-buffer1--dict-compare (1- (line-number-at-pos (line-beginning-position)))
                                                (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
-    ;; (print (list "unmodified-buffer1-check-equal" (current-buffer) (buffer-modified-p) (eq unmodified-buffer1--unmod-content-length (buffer-size))))
-    ;; (let* (
-    ;;        ;; (backtrace-line-length 20) ; used by `backtrace-get-frames'
-    ;;        ;; (print-level 10)
-    ;;        ;; (print-length 19)
-    ;;        (bt
-    ;;         ;; (with-output-to-string (backtrace))
-    ;;         (backtrace-to-string (backtrace-get-frames 'backtrace))))
-    ;;   (print bt))
-    ;; (print "s1)")
     (when (and
            ;; s2)
            ;; (when
@@ -353,7 +330,6 @@ Optional argument ARGS unused."
            ;; s4)
            (string-equal unmodified-buffer1--unmod-content
                          (buffer-substring-no-properties (point-min) (point-max))))
-      ;; (print "restore")
       (unmodified-buffer1--dict-cl)
       (set-buffer-modified-p nil)
       (when-let (bfn (buffer-file-name))
@@ -362,13 +338,19 @@ Optional argument ARGS unused."
 
 (defun unmodified-buffer1-save-or-revert ()
   "Re-save content after buffer is saved or reverted."
-  ;; (print "revert")
   (save-restriction
-    ;; (print (list "save"))
     (widen)
     (setq unmodified-buffer1--unmod-content (buffer-substring-no-properties (point-min) (point-max)))
     (setq unmodified-buffer1--unmod-content-length (buffer-size)))
   (unmodified-buffer1--dict-cl))
+
+(defun pos-at-line-col (l)
+  "Return buffer position at line L and column C."
+  (save-excursion
+    (goto-char (point-min))
+    (forward-line (1- l))
+    (line-end-position)))
+
 
 (defun unmodified-buffer1-undo-advice (orig-fun &rest args)
   "Clear cache of modified lines if buffer reverted.
@@ -376,39 +358,75 @@ If all modified lines is visible don't move pointer with undo.
 Aplied for visible buffers only.
 Argument ORIG-FUN `undo'.
 Optional argument ARGS `undo' arguments."
-  (if (not unmodified-buffer1-undo-not-jump-flag)
+  (print (list "here" unmodified-buffer1--dict-modified-keys))
+  (if (or (not unmodified-buffer1-undo-not-jump-flag)
+          (not unmodified-buffer1--dict-modified-keys))
       (apply orig-fun args)
+    ;; (let ((win (get-buffer-window (current-buffer) t)))
+    ;;   (print (list "undo-advice1" (get-buffer-window (current-buffer) t) (line-number-at-pos (window-start win)) (line-number-at-pos (window-end win)) unmodified-buffer1--dict-modified-keys)))
     ;; else
     (if-let* ((win (get-buffer-window (current-buffer) t)) ; check that buffer is visible
-              (start-pos (+ (line-number-at-pos (window-start win)) 3))
-              (end-pos (- (line-number-at-pos (window-end win)) 3)))
+              (start-pos (window-start win))
+              (end-pos (window-end win)))
         ;; buffer is visible
-        ;; check that all line numbers (modified lines) between start-pos and end-pos
-        (if (let (re) ; collecting results from maphash
-              (mapc (lambda (k)
-                      "get k."
-                      ;; (print (list start-pos k end-pos))
-                      (push (and (>= k start-pos)
-                                 (<= k end-pos))
-                            re))
-                    unmodified-buffer1--dict-modified-keys)
-              ;; all is true
-              (unmodified-buffer1--all re))
-            ;; all modified lines is visible.
-            (save-excursion
-              (apply orig-fun args))
-          ;; else - some modified lines is not visible
-          (apply orig-fun args))
-      ;; else - buffer not visible
-      (apply orig-fun args)))
+        (let (p pend)
+          (save-excursion
+            (apply orig-fun args)
+            (setq p (point))
+            (setq pend (line-end-position)))
+          ;; (print (list "ww"
+          ;;              (<= p start-pos)
+          ;;              (>= p end-pos)
+          ;;              (eq (get-char-property pend 'invisible) 'outline)))
+          (when (or (<= p start-pos)
+                    (>= p end-pos)
+                    (and unmodified-buffer1-undo-hidden-fix-flag
+                         (eq (get-char-property pend 'invisible) 'outline)))
+            (goto-char p)
+            ;; - show outline if line is hidden (fix for Undo for outline.)
+            (when (and unmodified-buffer1-undo-hidden-fix-flag
+                       (eq (get-char-property pend 'invisible) 'outline))
+              (outline-show-entry)
+              )
+            ))
+        ;; else - buffer not visible
+      (apply orig-fun args))
+    ;; (if-let* ((win (get-buffer-window (current-buffer) t)) ; check that buffer is visible
+    ;;           (start-pos (+ (line-number-at-pos (window-start win)) 3))
+    ;;           (end-pos (- (line-number-at-pos (window-end win)) 3)))
+    ;;     ;; buffer is visible
+    ;;     ;; check that all line numbers (modified lines) between start-pos and end-pos
+    ;;     (progn
+    ;;       (print "here2")
+    ;;     (if (let (re) ; collecting results from maphash
+    ;;           (print unmodified-buffer1--dict-modified-keys)
+    ;;           (mapc (lambda (k)
+    ;;                   "get k."
+    ;;                   (print (list k " invisible? " (eq (get-char-property (pos-at-line-col k) 'invisible) 'outline)))
+    ;;                   ;; (print (list "undo-advice2" start-pos k end-pos))
+    ;;                   (push (and (>= k start-pos)
+    ;;                              (<= k end-pos)
+    ;;                              (not (eq (get-char-property (pos-at-line-col k) 'invisible) 'outline)))
+    ;;                         re))
+    ;;                 unmodified-buffer1--dict-modified-keys)
+    ;;           ;; all is true
+    ;;           (unmodified-buffer1--all re))
+    ;;         ;; all modified lines is visible - don't move pointer
+    ;;         (save-excursion
+    ;;           (apply orig-fun args))
+    ;;       ;; else - some modified lines is not visible
+    ;;       (apply orig-fun args)))
+    ;;   ;; else - buffer not visible
+    ;;   (apply orig-fun args))
+
+    )
   ;; - clear modified keys if not buffer is not modified now.
   (unless (buffer-modified-p)
-    ;; (unmodified-buffer1--dict-cl) ; clear cache if not modified after undo.
     (setq unmodified-buffer1--dict-modified-keys nil) ; not clear cech, but clear modified list
     ))
 
 
-;;; - Hooks activation
+;; -- Hooks activation
 (defun unmodified-buffer1-add-hooks ()
   "Setup hooks for this buffer for unmodified content capture."
   (add-hook 'before-change-functions	#'unmodified-buffer1-save-unmodified-content nil t) ; save
@@ -425,7 +443,7 @@ Optional argument ARGS `undo' arguments."
   (remove-hook 'after-revert-hook		#'unmodified-buffer1-save-or-revert t)
   (advice-remove 'undo #'unmodified-buffer1-undo-advice))
 
-;;; - Mode
+;; -- Mode
 
 ;;;###autoload
 (define-minor-mode unmodified-buffer1-mode
@@ -454,14 +472,8 @@ mode off of existing buffers when deactivated."
     (with-current-buffer buffer
       (unmodified-buffer1-mode -1))))
 
-;;; - faster
-;; (defun unmodified-buffer1-inhibit-modification-hooks (func-call &rest args)
-;;   (combine-after-change-calls
-;;   ;; (let ((inhibit-modification-hooks t))
-;;     (apply func-call args)))
-
 ;; (advice-add 'prog-fill-reindent-defun :around #'unmodified-buffer1-inhibit-modification-hooks)
-;;; provide
+;; -- provide
 (provide 'unmodified-buffer1)
 
 ;;; unmodified-buffer1.el ends here
